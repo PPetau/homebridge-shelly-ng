@@ -85,7 +85,7 @@ export interface DeviceOptions {
   /**
    * The protocol to use when communicating with the device.
    */
-  protocol: 'websocket';
+  protocol: string;
   /**
    * The IP address or hostname of the device.
    */

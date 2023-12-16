@@ -1,3 +1,5 @@
+import EventEmitter from 'eventemitter3';
+
 import {
   API,
   DynamicPlatformPlugin,
@@ -11,11 +13,15 @@ import {
   DeviceDiscoverer,
   DeviceId,
   DeviceIdentifiers,
+  DeviceOptions,
   MdnsDeviceDiscoverer,
   Shellies,
 } from 'shellies-ng';
 
-import { CustomCharacteristics, createCharacteristics } from './utils/characteristics';
+import {
+  CustomCharacteristics,
+  createCharacteristics,
+} from './utils/characteristics';
 import { CustomServices, createServices } from './utils/services';
 import { DeviceCache } from './utils/device-cache';
 import { DeviceDelegate } from './device-delegates';
@@ -33,10 +39,19 @@ export const PLUGIN_NAME = 'homebridge-shelly-ng';
  */
 export const PLATFORM_NAME = 'ShellyNG';
 
+type ConfigDeviceDiscovererEvents = {
+  /**
+   * The 'discover' event is emitted when a device is discovered.
+   */
+  discover: (identifiers: DeviceIdentifiers) => void;
+};
+
 /**
  * Utility class that "discovers" devices from the configuration options.
  */
-export class ConfigDeviceDiscoverer extends DeviceDiscoverer {
+export class ConfigDeviceDiscoverer
+  extends EventEmitter<ConfigDeviceDiscovererEvents>
+  implements DeviceDiscoverer {
   /**
    * @param options - The platform configuration options.
    * @param emitInterval - The interval, in milliseconds, to wait between each emitted device.
@@ -55,6 +70,7 @@ export class ConfigDeviceDiscoverer extends DeviceDiscoverer {
         await this.emitDevice({
           deviceId: id,
           hostname: opts.hostname,
+          protocol: opts.protocol as 'websocket',
         });
       }
     }
@@ -66,17 +82,26 @@ export class ConfigDeviceDiscoverer extends DeviceDiscoverer {
   protected emitDevice(identifiers: DeviceIdentifiers): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        this.handleDiscoveredDevice(identifiers);
+        this.emit('discover', identifiers);
         resolve();
       }, this.emitInterval);
     });
   }
 }
 
+type CacheDeviceDiscovererEvents = {
+  /**
+   * The 'discover' event is emitted when a device is discovered.
+   */
+  discover: (identifiers: DeviceIdentifiers) => void;
+};
+
 /**
  * Utility class that "discovers" devices from a cache.
  */
-export class CacheDeviceDiscoverer extends DeviceDiscoverer {
+export class CacheDeviceDiscoverer
+  extends EventEmitter<CacheDeviceDiscovererEvents>
+  implements DeviceDiscoverer {
   /**
    * @param deviceCache - The cached devices.
    * @param emitInterval - The interval, in milliseconds, to wait between each emitted device.
@@ -94,6 +119,7 @@ export class CacheDeviceDiscoverer extends DeviceDiscoverer {
       await this.emitDevice({
         deviceId: d.id,
         hostname: d.hostname,
+        protocol: d.protocol as 'websocket',
       });
     }
   }
@@ -104,7 +130,7 @@ export class CacheDeviceDiscoverer extends DeviceDiscoverer {
   protected emitDevice(identifiers: DeviceIdentifiers): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        this.handleDiscoveredDevice(identifiers);
+        this.emit('discover', identifiers);
         resolve();
       }, this.emitInterval);
     });
@@ -139,7 +165,8 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
    * Holds all platform accessories that were loaded from cache during launch,
    * as well as accessories that have been created since launch.
    */
-  protected readonly accessories: Map<AccessoryUuid, PlatformAccessory> = new Map();
+  protected readonly accessories: Map<AccessoryUuid, PlatformAccessory> =
+    new Map();
 
   /**
    * A reference to our cached devices.
@@ -157,23 +184,24 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
    * @param config - Configuration options for this platform.
    * @param api - A reference to the homebridge API.
    */
-  constructor(
-    readonly log: Logger,
-    config: PlatformConfig,
-    readonly api: API,
-  ) {
+  constructor(readonly log: Logger, config: PlatformConfig, readonly api: API) {
     // get the platform options
     this.options = new PlatformOptions(config);
 
     this.customCharacteristics = Object.freeze(createCharacteristics(api));
-    this.customServices = Object.freeze(createServices(api, this.customCharacteristics));
+    this.customServices = Object.freeze(
+      createServices(api, this.customCharacteristics),
+    );
 
     // setup shellies-ng
     this.shellies = new Shellies({
-      websocket: { ...this.options.websocket, clientId: 'homebridge-shelly-ng-' + Math.round(Math.random() * 1000000) },
+      websocket: {
+        ...this.options.websocket,
+        clientId: 'homebridge-shelly-ng-' + Math.round(Math.random() * 1000000),
+      },
       autoLoadStatus: true,
       autoLoadConfig: true,
-      deviceOptions: this.options.deviceOptions,
+      deviceOptions: this.options.deviceOptions as Map<string, Partial<DeviceOptions>>,
     });
     this.shellies
       .on('add', this.handleAddedDevice, this)
@@ -248,7 +276,11 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
     }
 
     // unregister the accessories from homebridge
-    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, accessories);
+    this.api.unregisterPlatformAccessories(
+      PLUGIN_NAME,
+      PLATFORM_NAME,
+      accessories,
+    );
   }
 
   /**
@@ -317,7 +349,10 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
 
     // log errors
     discoverer.on('error', (error: Error) => {
-      this.log.error('An error occurred in the mDNS device discovery service:', error.message);
+      this.log.error(
+        'An error occurred in the mDNS device discovery service:',
+        error.message,
+      );
       this.log.debug(error.stack || '');
     });
 
@@ -327,7 +362,10 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
 
       this.log.info('mDNS device discovery started');
     } catch (e) {
-      this.log.error('Failed to start the mDNS device discovery service:', e instanceof Error ? e.message : e);
+      this.log.error(
+        'Failed to start the mDNS device discovery service:',
+        e instanceof Error ? e.message : e,
+      );
       if (e instanceof Error && e.stack) {
         this.log.debug(e.stack);
       }
@@ -423,7 +461,9 @@ export class ShellyPlatform implements DynamicPlatformPlugin {
    * Handles 'unknown' events from the shellies-ng library.
    */
   protected handleUnknownDevice(deviceId: DeviceId, model: string) {
-    this.log.info(`[${deviceId}] Unknown device of model "${model}" discovered.`);
+    this.log.info(
+      `[${deviceId}] Unknown device of model "${model}" discovered.`,
+    );
   }
 
   /**

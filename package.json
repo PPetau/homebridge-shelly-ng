@@ -46,6 +46,7 @@
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "shellies-ng": "^1.5.1"
+    "eventemitter3": "^5.0.0",
+    "shellies-ng": "git+https://github.com/PPetau/node-shellies-ng.git"
   }
 }
