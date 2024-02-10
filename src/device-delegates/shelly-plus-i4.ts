@@ -1,4 +1,4 @@
-import { ShellyPlusI4 } from 'shellies-ng';
+import { ShellyPlusI4 } from '@ppetau/shellies-ng';
 
 import { DeviceDelegate } from './base';
 import {

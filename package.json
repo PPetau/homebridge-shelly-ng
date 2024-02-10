@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-shelly-ng",
+  "name": "@ppetau/homebridge-shelly-ng",
   "version": "1.6.0",
   "description": "Homebridge plugin for the next generation of Shelly devices",
   "main": "dist/index.js",
@@ -47,6 +47,6 @@
   },
   "dependencies": {
     "eventemitter3": "^5.0.0",
-    "shellies-ng": "git+https://github.com/PPetau/node-shellies-ng.git"
+    "@ppetau/shellies-ng": "1.6.0"
   }
 }

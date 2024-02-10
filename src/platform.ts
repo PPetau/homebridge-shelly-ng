@@ -16,7 +16,7 @@ import {
   DeviceOptions,
   MdnsDeviceDiscoverer,
   Shellies,
-} from 'shellies-ng';
+} from '@ppetau/shellies-ng';
 
 import {
   CustomCharacteristics,

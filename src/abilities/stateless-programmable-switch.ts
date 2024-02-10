@@ -1,4 +1,4 @@
-import { Input } from 'shellies-ng';
+import { Input } from '@ppetau/shellies-ng';
 
 import { Ability, ServiceClass } from './base';
 

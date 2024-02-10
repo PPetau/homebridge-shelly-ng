@@ -1,7 +1,7 @@
 import {
   ShellyPlus2Pm,
   ShellyPlus2PmRev1,
-} from 'shellies-ng';
+} from '@ppetau/shellies-ng';
 
 import { DeviceDelegate } from './base';
 

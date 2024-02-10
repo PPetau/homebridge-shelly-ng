@@ -2,7 +2,7 @@ import {
   ShellyPro2Pm,
   ShellyPro2PmRev1,
   ShellyPro2PmRev2,
-} from 'shellies-ng';
+} from '@ppetau/shellies-ng';
 
 import { DeviceDelegate } from './base';
 

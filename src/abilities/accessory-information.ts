@@ -1,4 +1,4 @@
-import { Device } from 'shellies-ng';
+import { Device } from '@ppetau/shellies-ng';
 
 import { Ability, ServiceClass } from './base';
 
